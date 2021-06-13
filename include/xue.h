@@ -113,35 +113,26 @@ static inline uint64_t xue_sys_virt_to_dma(void *, const void *virt)
 #endif
 
 /* Bareflank VMM */
-#if defined(VMM)
-#include <arch/intel_x64/barrier.h>
-#include <arch/intel_x64/pause.h>
-#include <arch/x64/cache.h>
-#include <arch/x64/portio.h>
-#include <cstdio>
-#include <debug/serial/serial_ns16550a.h>
-#include <memory_manager/arch/x64/cr3.h>
-#include <memory_manager/memory_manager.h>
-#include <string>
+#if defined(HYPERVISOR_SERIAL_USB3_XUE)
 
-static_assert(XUE_PAGE_SIZE == BAREFLANK_PAGE_SIZE);
+static_assert(XUE_PAGE_SIZE == HYPERVISOR_PAGE_SIZE);
 
-#define xue_printf(...)                                                        \
-    do {                                                                       \
-        char buf[256] { 0 };                                                   \
-        snprintf(buf, 256, __VA_ARGS__);                                       \
-        for (int i = 0; i < 256; i++) {                                        \
-            if (buf[i]) {                                                      \
-                bfvmm::DEFAULT_COM_DRIVER::instance()->write(buf[i]);          \
-            } else {                                                           \
-                break;                                                         \
-            }                                                                  \
-        }                                                                      \
-    } while (0)
+// #define xue_printf(...)                                                        \
+//     do {                                                                       \
+//         char buf[256] { 0 };                                                   \
+//         snprintf(buf, 256, __VA_ARGS__);                                       \
+//         for (int i = 0; i < 256; i++) {                                        \
+//             if (buf[i]) {                                                      \
+//                 bfvmm::DEFAULT_COM_DRIVER::instance()->write(buf[i]);          \
+//             } else {                                                           \
+//                 break;                                                         \
+//             }                                                                  \
+//         }                                                                      \
+//     } while (0)
 
-#define xue_debug(...) xue_printf("xue debug: " __VA_ARGS__)
-#define xue_alert(...) xue_printf("xue alert: " __VA_ARGS__)
-#define xue_error(...) xue_printf("xue error: " __VA_ARGS__)
+// #define xue_debug(...) xue_printf("xue debug: " __VA_ARGS__)
+// #define xue_alert(...) xue_printf("xue alert: " __VA_ARGS__)
+// #define xue_error(...) xue_printf("xue error: " __VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,8 +160,7 @@ static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
 {
     (void)sys;
     (void)order;
-
-    g_mm->free(addr);
+    (void)addr;
 }
 
 static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
@@ -193,12 +183,8 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
 {
     (void)sys;
-
-    for (uint64_t i = 0U; i < count; i += XUE_PAGE_SIZE) {
-        g_cr3->unmap((uint64_t)virt + i);
-    }
-
-    g_mm->free_map(virt);
+    (void)virt;
+    (void)count;
 }
 
 static inline void xue_sys_outd(void *sys, uint32_t port, uint32_t data)
@@ -1106,6 +1092,57 @@ static inline int xue_init_xhc(struct xue *xue)
     xue->xhc_mmio = ops->map_xhc(sys, xue->xhc_mmio_phys, xue->xhc_mmio_size);
 
     return xue->xhc_mmio != NULL;
+}
+
+/*
+* Returns the XHCI physical memory address in xue->xhc_mmio_phys 
+* and the corresponding size in xue->xhc_mmio_size
+*/
+static inline void xhc_mmio_phys(strcut xue xue*){
+    uint32_t bar0;
+    uint64_t bar1;
+    uint64_t devfn;
+
+    void *sys = xue->sys;
+    xue->xhc_cf8 = 0;
+
+    /*
+     * Search PCI bus 0 for the xHC. All the host controllers supported so far
+     * are part of the chipset and are on bus 0.
+     */
+    for (devfn = 0; devfn < 256; devfn++) {
+        uint32_t dev = (devfn & 0xF8) >> 3;
+        uint32_t fun = devfn & 0x07;
+        uint32_t cf8 = (1UL << 31) | (dev << 11) | (fun << 8);
+        uint32_t hdr = (xue_pci_read(xue, cf8, 3) & 0xFF0000U) >> 16;
+
+        if (hdr == 0 || hdr == 0x80) {
+            if ((xue_pci_read(xue, cf8, 2) >> 8) == XUE_XHC_CLASSC) {
+                xue->xhc_cf8 = cf8;
+                break;
+            }
+        }
+    }
+
+    if (!xue->xhc_cf8) {
+        xue_error("Compatible xHC not found on bus 0\n");
+        return 0;
+    }
+
+    /* ...we found it, so parse the BAR and map the registers */
+    bar0 = xue_pci_read(xue, xue->xhc_cf8, 4);
+    bar1 = xue_pci_read(xue, xue->xhc_cf8, 5);
+
+    /* IO BARs not allowed; BAR must be 64-bit */
+    if ((bar0 & 0x1) != 0 || ((bar0 & 0x6) >> 1) != 2) {
+        return 0;
+    }
+
+    xue_pci_write(xue, xue->xhc_cf8, 4, 0xFFFFFFFF);
+    xue->xhc_mmio_size = ~(xue_pci_read(xue, xue->xhc_cf8, 4) & 0xFFFFFFF0) + 1;
+    xue_pci_write(xue, xue->xhc_cf8, 4, bar0);
+
+    xue->xhc_mmio_phys = (bar0 & 0xFFFFFFF0) | (bar1 << 32);
 }
 
 /**
