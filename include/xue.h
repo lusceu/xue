@@ -366,7 +366,7 @@ static inline void xue_sys_outd(void *sys, uint32_t port, uint32_t data)
     (void)port;
     (void)data;
 
-    WRITE_PORT_ULONG((PULONG)port, (ULONG)data);
+    WRITE_PORT_ULONG((PULONG)&port, (ULONG)data);
 }
 
 static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
@@ -374,7 +374,7 @@ static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
     (void)sys;
     (void)port;
 
-    return (uint32_t)READ_PORT_ULONG((PULONG)port);
+    return (uint32_t)READ_PORT_ULONG((PULONG)&port);
 }
 
 static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
