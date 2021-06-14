@@ -296,7 +296,10 @@ typedef INT_PTR intptr_t;
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,                        \
                "xue error: " __VA_ARGS__)
 
-static inline int xue_sys_init(void *sys) { return 1; }
+static inline int xue_sys_init(void *sys) {
+    (void)sys;
+    return 1;
+}
 static inline void xue_sys_clflush(void * a, void * b) {}
 
 static inline void xue_sys_sfence(void *sys)
