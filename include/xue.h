@@ -390,7 +390,7 @@ static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
 {
     (void)sys;
 
-    PHYSICAL_ADDRESS phys_addr = MmGetPhysicalAddress(virt);
+    PHYSICAL_ADDRESS phys_addr = MmGetPhysicalAddress((PVOID)virt);
     return (uint64_t)phys_addr.QuadPart;
 }
 
