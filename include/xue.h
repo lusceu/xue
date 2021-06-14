@@ -1552,7 +1552,7 @@ static inline int xue_init_dbc(struct xue *xue)
     // uint64_t out = 0;
     // uint64_t in = 0;
     // uint64_t mbs = 0;
-    struct xue_ops *op = xue->ops;
+    // struct xue_ops *op = xue->ops;
     struct xue_dbc_reg *reg = xue_find_dbc(xue);
 
     if (!reg) {
