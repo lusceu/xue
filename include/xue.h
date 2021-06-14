@@ -1103,7 +1103,7 @@ static inline void* xhc_mmio_phys(struct xue *xue){
     uint64_t bar1;
     uint64_t devfn;
 
-    void *sys = xue->sys;
+    //void *sys = xue->sys;
     xue->xhc_cf8 = 0;
 
     /*
