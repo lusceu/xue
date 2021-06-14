@@ -1591,12 +1591,12 @@ static inline int xue_init_dbc(struct xue *xue)
     reg->ddi1 = (XUE_DBC_VENDOR << 16) | XUE_DBC_PROTOCOL;
     reg->ddi2 = XUE_DBC_PRODUCT;
 
-    xue_flush_range(xue, xue->dbc_ctx, sizeof(*xue->dbc_ctx));
-    xue_flush_range(xue, xue->dbc_erst, sizeof(*xue->dbc_erst));
-    xue_flush_range(xue, xue->dbc_ering.trb, XUE_TRB_RING_BYTES);
-    xue_flush_range(xue, xue->dbc_oring.trb, XUE_TRB_RING_BYTES);
-    xue_flush_range(xue, xue->dbc_iring.trb, XUE_TRB_RING_BYTES);
-    xue_flush_range(xue, xue->dbc_owork.buf, XUE_WORK_RING_BYTES);
+    // xue_flush_range(xue, xue->dbc_ctx, sizeof(*xue->dbc_ctx));
+    // xue_flush_range(xue, xue->dbc_erst, sizeof(*xue->dbc_erst));
+    // xue_flush_range(xue, xue->dbc_ering.trb, XUE_TRB_RING_BYTES);
+    // xue_flush_range(xue, xue->dbc_oring.trb, XUE_TRB_RING_BYTES);
+    // xue_flush_range(xue, xue->dbc_iring.trb, XUE_TRB_RING_BYTES);
+    // xue_flush_range(xue, xue->dbc_owork.buf, XUE_WORK_RING_BYTES);
 
     return 1;
 }
