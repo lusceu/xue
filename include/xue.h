@@ -1098,7 +1098,7 @@ static inline int xue_init_xhc(struct xue *xue)
 * Returns the XHCI physical memory address in xue->xhc_mmio_phys 
 * and the corresponding size in xue->xhc_mmio_size
 */
-static inline void xhc_mmio_phys(struct xue *xue){
+static inline void* xhc_mmio_phys(struct xue *xue){
     uint32_t bar0;
     uint64_t bar1;
     uint64_t devfn;
@@ -1143,6 +1143,7 @@ static inline void xhc_mmio_phys(struct xue *xue){
     xue_pci_write(xue, xue->xhc_cf8, 4, bar0);
 
     xue->xhc_mmio_phys = (bar0 & 0xFFFFFFF0) | (bar1 << 32);
+    return 1;
 }
 
 /**
