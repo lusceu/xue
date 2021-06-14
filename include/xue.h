@@ -328,7 +328,7 @@ static inline void *xue_sys_alloc_dma(void *sys, uint64_t order)
 {
     (void)sys;
 
-    return MmAllocateNonCachedMemory(XUE_PAGE_SIZE << order);
+    return (void *)MmAllocateNonCachedMemory(XUE_PAGE_SIZE << order);
 }
 
 static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
@@ -375,7 +375,7 @@ static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
 {
     (void)sys;
 
-    return MmGetPhysicalAddress((PVOID)virt);
+    return (uint64_t)MmGetPhysicalAddress((PVOID)virt);
 }
 
 #endif
