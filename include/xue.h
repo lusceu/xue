@@ -302,8 +302,7 @@ static inline int xue_sys_init(void *sys) {
     return 1;
 }
 static inline void xue_sys_clflush(void *sys, void *ptr) { 
-    (void)a;
-    (void)b;
+    (void)sys;
     _mm_clflush(ptr);
 }
 
@@ -343,7 +342,7 @@ static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
 static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 {
     (void)sys;
-    return MmMapIoSpace(phys,(SIZE_T)count, MmNonCached);
+    return MmMapIoSpace((void *)phys,(SIZE_T)count, MmNonCached);
 }
 
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
