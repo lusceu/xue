@@ -335,14 +335,14 @@ static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
 {
     (void)sys;
 
-    MmFreeNonCachedMemory(PVOID)addr, XUE_PAGE_SIZE << order);
+    MmFreeNonCachedMemory((PVOID)addr, XUE_PAGE_SIZE << order);
 );
 }
 
 static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 {
     (void)sys;
-    return MmMapIoSpace((void *)phys,(SIZE_T)count, MmNonCached);
+    return MmMapIoSpace(phys,(SIZE_T)count, MmNonCached);
 }
 
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
