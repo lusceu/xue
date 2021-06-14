@@ -113,7 +113,7 @@ static inline uint64_t xue_sys_virt_to_dma(void *, const void *virt)
 #endif
 
 /* Bareflank VMM */
-#if defined(HYPERVISOR_SERIAL_USB3_XUE)
+#if defined(VMM)
 
 static_assert(XUE_PAGE_SIZE == HYPERVISOR_PAGE_SIZE);
 
@@ -295,6 +295,9 @@ typedef INT_PTR intptr_t;
 #define xue_error(...)                                                         \
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,                        \
                "xue error: " __VA_ARGS__)
+
+static inline int xue_sys_init(void *sys) { return 1; }
+static inline void xue_sys_clflush(void *, void *) {}
 
 static inline void xue_sys_sfence(void *sys)
 {
