@@ -285,6 +285,10 @@ typedef UINT64 uint64_t;
 typedef UINT_PTR uintptr_t;
 typedef INT_PTR intptr_t;
 
+PHYSICAL_ADDRESS MmGetPhysicalAddress(
+  PVOID BaseAddress
+);
+
 #define XUE_SYSID xue_sysid_windows
 
 #define xue_debug(...)                                                         \
