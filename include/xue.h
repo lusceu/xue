@@ -303,6 +303,7 @@ static inline int xue_sys_init(void *sys) {
 static inline void xue_sys_clflush(void *a, void *b) { 
     (void)a;
     (void)b;
+    _mm_clflush();
 }
 
 static inline void xue_sys_sfence(void *sys)
@@ -326,29 +327,22 @@ static inline void xue_sys_pause(void *sys)
 static inline void *xue_sys_alloc_dma(void *sys, uint64_t order)
 {
     (void)sys;
-    (void)order;
 
-    xue_error("Xue cannot be used from windows drivers");
-    return NULL;
+    return MmAllocateNonCachedMemory(XUE_PAGE_SIZE << order);
 }
 
 static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
 {
     (void)sys;
-    (void)addr;
-    (void)order;
 
-    xue_error("Xue cannot be used from windows drivers");
+    MmFreeNonCachedMemory(PVOID(addr), XUE_PAGE_SIZE << order);
+);
 }
 
 static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 {
     (void)sys;
-    (void)phys;
-    (void)count;
-
-    xue_error("Xue cannot be used from windows drivers");
-    return NULL;
+    return MmMapIoSpace((PHYSICAL_ADDRESS)phys,(SIZE_T)count,MmNonCached);
 }
 
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
@@ -357,7 +351,7 @@ static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
     (void)virt;
     (void)count;
 
-    xue_error("Xue cannot be used from windows drivers");
+    MmUnmapIoSpace((PVOID)virt, (SIZE_T)count);
 }
 
 static inline void xue_sys_outd(void *sys, uint32_t port, uint32_t data)
@@ -380,10 +374,8 @@ static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
 static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
 {
     (void)sys;
-    (void)virt;
 
-    xue_error("Xue cannot be used from windows drivers");
-    return 0U;
+    return MmGetPhysicalAddress((PVOID)virt);
 }
 
 #endif
