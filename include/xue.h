@@ -1548,10 +1548,10 @@ static inline void xue_disable_dbc(struct xue *xue)
 
 static inline int xue_init_dbc(struct xue *xue)
 {
-    uint64_t erdp = 0;
-    uint64_t out = 0;
-    uint64_t in = 0;
-    uint64_t mbs = 0;
+    // uint64_t erdp = 0;
+    // uint64_t out = 0;
+    // uint64_t in = 0;
+    // uint64_t mbs = 0;
     struct xue_ops *op = xue->ops;
     struct xue_dbc_reg *reg = xue_find_dbc(xue);
 
@@ -1562,34 +1562,34 @@ static inline int xue_init_dbc(struct xue *xue)
     xue->dbc_reg = reg;
     xue_disable_dbc(xue);
 
-    xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
-    xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
-    xue_trb_ring_init(xue, &xue->dbc_iring, 1, XUE_DB_IN);
+    // xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
+    // xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
+    // xue_trb_ring_init(xue, &xue->dbc_iring, 1, XUE_DB_IN);
 
-    erdp = op->virt_to_dma(xue->sys, xue->dbc_ering.trb);
-    if (!erdp) {
-        return 0;
-    }
+    // erdp = op->virt_to_dma(xue->sys, xue->dbc_ering.trb);
+    // if (!erdp) {
+    //     return 0;
+    // }
 
-    xue_mset(xue->dbc_erst, 0, sizeof(*xue->dbc_erst));
-    xue->dbc_erst->base = erdp;
-    xue->dbc_erst->size = XUE_TRB_RING_CAP;
+    // xue_mset(xue->dbc_erst, 0, sizeof(*xue->dbc_erst));
+    // xue->dbc_erst->base = erdp;
+    // xue->dbc_erst->size = XUE_TRB_RING_CAP;
 
-    mbs = (reg->ctrl & 0xFF0000) >> 16;
-    out = op->virt_to_dma(xue->sys, xue->dbc_oring.trb);
-    in = op->virt_to_dma(xue->sys, xue->dbc_iring.trb);
+    // mbs = (reg->ctrl & 0xFF0000) >> 16;
+    // out = op->virt_to_dma(xue->sys, xue->dbc_oring.trb);
+    // in = op->virt_to_dma(xue->sys, xue->dbc_iring.trb);
 
-    xue_mset(xue->dbc_ctx, 0, sizeof(*xue->dbc_ctx));
-    xue_init_strings(xue, xue->dbc_ctx->info);
-    xue_init_ep(xue->dbc_ctx->ep_out, mbs, xue_ep_bulk_out, out);
-    xue_init_ep(xue->dbc_ctx->ep_in, mbs, xue_ep_bulk_in, in);
+    // xue_mset(xue->dbc_ctx, 0, sizeof(*xue->dbc_ctx));
+    // xue_init_strings(xue, xue->dbc_ctx->info);
+    // xue_init_ep(xue->dbc_ctx->ep_out, mbs, xue_ep_bulk_out, out);
+    // xue_init_ep(xue->dbc_ctx->ep_in, mbs, xue_ep_bulk_in, in);
 
-    reg->erstsz = 1;
-    reg->erstba = op->virt_to_dma(xue->sys, xue->dbc_erst);
-    reg->erdp = erdp;
-    reg->cp = op->virt_to_dma(xue->sys, xue->dbc_ctx);
-    reg->ddi1 = (XUE_DBC_VENDOR << 16) | XUE_DBC_PROTOCOL;
-    reg->ddi2 = XUE_DBC_PRODUCT;
+    // reg->erstsz = 1;
+    // reg->erstba = op->virt_to_dma(xue->sys, xue->dbc_erst);
+    // reg->erdp = erdp;
+    // reg->cp = op->virt_to_dma(xue->sys, xue->dbc_ctx);
+    // reg->ddi1 = (XUE_DBC_VENDOR << 16) | XUE_DBC_PROTOCOL;
+    // reg->ddi2 = XUE_DBC_PRODUCT;
 
     // xue_flush_range(xue, xue->dbc_ctx, sizeof(*xue->dbc_ctx));
     // xue_flush_range(xue, xue->dbc_erst, sizeof(*xue->dbc_erst));
