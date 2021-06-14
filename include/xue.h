@@ -289,6 +289,15 @@ PHYSICAL_ADDRESS MmGetPhysicalAddress(
   PVOID BaseAddress
 );
 
+PVOID MmAllocateNonCachedMemory(
+  SIZE_T NumberOfBytes
+);
+
+void MmFreeNonCachedMemory(
+  PVOID  BaseAddress,
+  SIZE_T NumberOfBytes
+);
+
 #define XUE_SYSID xue_sysid_windows
 
 #define xue_debug(...)                                                         \
