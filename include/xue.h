@@ -1757,9 +1757,9 @@ static inline int64_t xue_open(struct xue *xue, struct xue_ops *ops, void *sys)
         return 0;
     }
 
-    // if (!xue_alloc(xue)) {
-    //     return 0;
-    // }
+    if (!xue_alloc(xue)) {
+        return 0;
+    }
 
     // if (!xue_init_dbc(xue)) {
     //     xue_free(xue);
