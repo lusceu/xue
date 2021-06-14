@@ -343,7 +343,7 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
     (void)sys;
     PHYSICAL_ADDRESS phys_addr;
     phys_addr.QuadPart = phys;
-    
+
     return MmMapIoSpace(phys_addr, (SIZE_T)count, MmNonCached);
 }
 
@@ -377,7 +377,7 @@ static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
 {
     (void)sys;
 
-    phys_addr = MmGetPhysicalAddress(virt);
+    PHYSICAL_ADDRESS phys_addr = MmGetPhysicalAddress(virt);
     return (uint64_t)phys_addr.QuadPart;
 }
 
