@@ -366,7 +366,7 @@ static inline void xue_sys_outd(void *sys, uint32_t port, uint32_t data)
     (void)port;
     (void)data;
 
-    WRITE_PORT_ULONG((PULONG)&port, (ULONG)data);
+    WRITE_PORT_ULONG((PULONG)port, (ULONG)data);
 }
 
 static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
@@ -374,7 +374,7 @@ static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
     (void)sys;
     (void)port;
 
-    return (uint32_t)READ_PORT_ULONG((PULONG)&port);
+    return (uint32_t)READ_PORT_ULONG((PULONG)port);
 }
 
 static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
@@ -1695,18 +1695,18 @@ free_ctx:
 
 static inline void xue_init_ops(struct xue *xue, struct xue_ops *ops)
 {
-    xue_set_op(init);
-    xue_set_op(alloc_dma);
-    xue_set_op(free_dma);
-    xue_set_op(map_xhc);
-    xue_set_op(unmap_xhc);
-    xue_set_op(outd);
-    xue_set_op(ind);
-    xue_set_op(virt_to_dma);
-    xue_set_op(sfence);
-    xue_set_op(lfence);
-    xue_set_op(pause);
-    xue_set_op(clflush);
+    ops->init = xue_sys_init;
+    ops->alloc_dma = xue_sys_alloc_dma;
+    ops->free_dma = xue_sys_free_dma;
+    ops->map_xhc = xue_sys_map_xhc;
+    ops->unmap_xhc = xue_sys_unmap_xhc;
+    ops->outd = xue_sys_outd;
+    ops->ind = xue_sys_ind;
+    ops->virt_to_dma = xue_sys_virt_to_dma;
+    ops->sfence = xue_sys_sfence;
+    ops->lfence = xue_sys_lfence;
+    ops->pause = xue_sys_pause;
+    ops->clflush = xue_sys_clflush;
 
     xue->ops = ops;
 }
