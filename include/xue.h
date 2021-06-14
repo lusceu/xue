@@ -272,6 +272,7 @@ static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
 
 /* Windows driver */
 #if defined(_WIN32)
+#include <ntddk.h>
 #include <basetsd.h>
 typedef INT8 int8_t;
 typedef INT16 int16_t;
@@ -300,10 +301,10 @@ static inline int xue_sys_init(void *sys) {
     (void)sys;
     return 1;
 }
-static inline void xue_sys_clflush(void *a, void *b) { 
+static inline void xue_sys_clflush(void *sys, void *ptr) { 
     (void)a;
     (void)b;
-    _mm_clflush();
+    _mm_clflush(ptr);
 }
 
 static inline void xue_sys_sfence(void *sys)
@@ -335,14 +336,14 @@ static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
 {
     (void)sys;
 
-    MmFreeNonCachedMemory(PVOID(addr), XUE_PAGE_SIZE << order);
+    MmFreeNonCachedMemory(PVOID)addr, XUE_PAGE_SIZE << order);
 );
 }
 
 static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 {
     (void)sys;
-    return MmMapIoSpace((PHYSICAL_ADDRESS)phys,(SIZE_T)count,MmNonCached);
+    return MmMapIoSpace(phys,(SIZE_T)count, MmNonCached);
 }
 
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
