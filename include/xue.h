@@ -296,30 +296,22 @@ typedef INT_PTR intptr_t;
     DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL,                        \
                "xue error: " __VA_ARGS__)
 
-static inline int xue_sys_init(void *sys)
-{
-    (void)sys;
-
-    xue_error("Xue cannot be used from windows drivers");
-    return 0;
-}
-
 static inline void xue_sys_sfence(void *sys)
 {
     (void)sys;
-    xue_error("Xue cannot be used from windows drivers");
+    _mm_sfence();
 }
 
 static inline void xue_sys_lfence(void *sys)
 {
     (void)sys;
-    xue_error("Xue cannot be used from windows drivers");
+    _mm_lfence();
 }
 
 static inline void xue_sys_pause(void *sys)
 {
     (void)sys;
-    xue_error("Xue cannot be used from windows drivers");
+    _mm_pause();
 }
 
 static inline void *xue_sys_alloc_dma(void *sys, uint64_t order)
@@ -365,7 +357,7 @@ static inline void xue_sys_outd(void *sys, uint32_t port, uint32_t data)
     (void)port;
     (void)data;
 
-    xue_error("Xue cannot be used from windows drivers");
+    WRITE_PORT_ULONG((PULONG)port, (ULONG)data);
 }
 
 static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
@@ -373,8 +365,7 @@ static inline uint32_t xue_sys_ind(void *sys, uint32_t port)
     (void)sys;
     (void)port;
 
-    xue_error("Xue cannot be used from windows drivers");
-    return 0U;
+    return (uint32_t)READ_PORT_ULONG((PULONG)port);
 }
 
 static inline uint64_t xue_sys_virt_to_dma(void *sys, const void *virt)
