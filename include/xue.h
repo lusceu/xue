@@ -1078,6 +1078,7 @@ static inline int xue_init_xhc(struct xue *xue)
         }
     }
 
+    bfdebug_x64("dev:", devfn);
     if (!xue->xhc_cf8) {
         xue_error("Compatible xHC not found on bus 0\n");
         return 0;
@@ -1093,7 +1094,7 @@ static inline int xue_init_xhc(struct xue *xue)
     }
 
     xue_pci_write(xue, xue->xhc_cf8, 4, 0xFFFFFFFF);
-    xue->xhc_mmio_size = ~(xue_pci_read(xue, xue->xhc_cf8, 4) & 0xFFFFFFF0) + 1;
+    xue->xhc_mmio_size = (~(xue_pci_read(xue, xue->xhc_cf8, 4) & 0xFFFFFFF0) + 1);
     xue_pci_write(xue, xue->xhc_cf8, 4, bar0);
 
     xue->xhc_mmio_phys = (bar0 & 0xFFFFFFF0) | (bar1 << 32);
@@ -1162,12 +1163,12 @@ static inline int xhc_mmio_phys(struct xue *xue){
  */
 static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
 {
-    //uint32_t *xcap;
-    //uint32_t next;
-    //uint32_t id;
+    uint32_t *xcap;
+    uint32_t next;
+    uint32_t id;
     uint8_t *mmio = (uint8_t *)xue->xhc_mmio;
     uint32_t *hccp1 = (uint32_t *)(mmio + 0x10);
-    //const uint32_t DBC_ID = 0xA;
+    const uint32_t DBC_ID = 0xA;
 
     /**
      * Paranoid check against a zero value. The spec mandates that
@@ -1178,27 +1179,45 @@ static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
         return NULL;
     }
 
-    return NULL;
-    // xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
-    // next = (*xcap & 0xFF00) >> 8;
+    xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
+    next = (*xcap & 0xFF00) >> 8;
+    id = *xcap & 0xFF;
+
+    // bfdebug("xue id:");
+    // bfdebug_x32(" - id", id);
+
+    // xcap += next;
+    // bfdebug_ptr(" - addr", (void*)xcap);
     // id = *xcap & 0xFF;
+    // next = (*xcap & 0xFF00) >> 8;
 
-    // /**
-    //  * Table 7-1 states that 'next' is relative to
-    //  * the current value of xcap and is a dword offset.
-    //  */
-    // while (id != DBC_ID && next) {
-    //     xcap += next;
-    //     id = *xcap & 0xFF;
-    //     next = (*xcap & 0xFF00) >> 8;
-    // }
+    // bfdebug("xue id:");
+    // bfdebug_x32(" - id", id);
 
-    // if (id != DBC_ID) {
-    //     return NULL;
-    // }
+    // xcap += next;
+    // bfdebug_ptr(" - addr", (void*)xcap);
+    // id = *xcap & 0xFF;
+    // next = (*xcap & 0xFF00) >> 8;
 
-    // xue->xhc_dbc_offset = (uint64_t)xcap - (uint64_t)mmio;
-    // return (struct xue_dbc_reg *)xcap;
+    /**
+     * Table 7-1 states that 'next' is relative to
+     * the current value of xcap and is a dword offset.
+     */
+    while (id != DBC_ID && next) {
+        xcap += next;
+        id = *xcap & 0xFF;
+        next = (*xcap & 0xFF00) >> 8;
+    }
+
+    if (id != DBC_ID) {
+        return NULL;
+    }
+
+    bfdebug("xue id:");
+    bfdebug_x32(" - id", id);
+
+    xue->xhc_dbc_offset = (uint64_t)xcap - (uint64_t)mmio;
+    return (struct xue_dbc_reg *)xcap;
 }
 
 /**
@@ -1275,12 +1294,16 @@ static inline void xue_trb_ring_init(const struct xue *xue,
                                      struct xue_trb_ring *ring, int producer,
                                      int doorbell)
 {
+
+    bfdebug("xue ring->trb:");
+    bfdebug_ptr(" - trb-addr", ring->trb);
     xue_mset(ring->trb, 0, XUE_TRB_RING_CAP * sizeof(ring->trb[0]));
 
     ring->enq = 0;
     ring->deq = 0;
     ring->cyc = 1;
     ring->db = (uint8_t)doorbell;
+    (void)xue;
 
     /*
      * Producer implies transfer ring, so we have to place a
@@ -1288,6 +1311,7 @@ static inline void xue_trb_ring_init(const struct xue *xue,
      */
     if (producer) {
         struct xue_trb *trb = &ring->trb[XUE_TRB_RING_CAP - 1];
+        (void)trb;
         xue_trb_set_type(trb, xue_trb_link);
         xue_trb_link_set_tc(trb);
         xue_trb_link_set_rsp(trb, xue->ops->virt_to_dma(xue->sys, ring->trb));
@@ -1549,55 +1573,59 @@ static inline void xue_disable_dbc(struct xue *xue)
 
 static inline int xue_init_dbc(struct xue *xue)
 {
-    // uint64_t erdp = 0;
-    // uint64_t out = 0;
-    // uint64_t in = 0;
-    // uint64_t mbs = 0;
-    // struct xue_ops *op = xue->ops;
+    uint64_t erdp = 0;
+    uint64_t out = 0;
+    uint64_t in = 0;
+    uint64_t mbs = 0;
+    struct xue_ops *op = xue->ops;
     struct xue_dbc_reg *reg = xue_find_dbc(xue);
 
     if (!reg) {
         return 0;
     }
 
-    // xue->dbc_reg = reg;
-    // xue_disable_dbc(xue);
+    xue->dbc_reg = reg;
+    xue_disable_dbc(xue);
 
-    // xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
-    // xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
-    // xue_trb_ring_init(xue, &xue->dbc_iring, 1, XUE_DB_IN);
+    bfdebug("xue trb_ring:");
+    bfdebug_ptr(" - addr", &xue->dbc_ering);
 
-    // erdp = op->virt_to_dma(xue->sys, xue->dbc_ering.trb);
-    // if (!erdp) {
-    //     return 0;
-    // }
 
-    // xue_mset(xue->dbc_erst, 0, sizeof(*xue->dbc_erst));
-    // xue->dbc_erst->base = erdp;
-    // xue->dbc_erst->size = XUE_TRB_RING_CAP;
+    xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
+    xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
+    xue_trb_ring_init(xue, &xue->dbc_iring, 1, XUE_DB_IN);
 
-    // mbs = (reg->ctrl & 0xFF0000) >> 16;
-    // out = op->virt_to_dma(xue->sys, xue->dbc_oring.trb);
-    // in = op->virt_to_dma(xue->sys, xue->dbc_iring.trb);
+    erdp = op->virt_to_dma(xue->sys, xue->dbc_ering.trb);
+    if (!erdp) {
+        return 0;
+    }
 
-    // xue_mset(xue->dbc_ctx, 0, sizeof(*xue->dbc_ctx));
-    // xue_init_strings(xue, xue->dbc_ctx->info);
-    // xue_init_ep(xue->dbc_ctx->ep_out, mbs, xue_ep_bulk_out, out);
-    // xue_init_ep(xue->dbc_ctx->ep_in, mbs, xue_ep_bulk_in, in);
+    xue_mset(xue->dbc_erst, 0, sizeof(*xue->dbc_erst));
+    xue->dbc_erst->base = erdp;
+    xue->dbc_erst->size = XUE_TRB_RING_CAP;
 
-    // reg->erstsz = 1;
-    // reg->erstba = op->virt_to_dma(xue->sys, xue->dbc_erst);
-    // reg->erdp = erdp;
-    // reg->cp = op->virt_to_dma(xue->sys, xue->dbc_ctx);
-    // reg->ddi1 = (XUE_DBC_VENDOR << 16) | XUE_DBC_PROTOCOL;
-    // reg->ddi2 = XUE_DBC_PRODUCT;
+    mbs = (reg->ctrl & 0xFF0000) >> 16;
+    out = op->virt_to_dma(xue->sys, xue->dbc_oring.trb);
+    in = op->virt_to_dma(xue->sys, xue->dbc_iring.trb);
 
-    // xue_flush_range(xue, xue->dbc_ctx, sizeof(*xue->dbc_ctx));
-    // xue_flush_range(xue, xue->dbc_erst, sizeof(*xue->dbc_erst));
-    // xue_flush_range(xue, xue->dbc_ering.trb, XUE_TRB_RING_BYTES);
-    // xue_flush_range(xue, xue->dbc_oring.trb, XUE_TRB_RING_BYTES);
-    // xue_flush_range(xue, xue->dbc_iring.trb, XUE_TRB_RING_BYTES);
-    // xue_flush_range(xue, xue->dbc_owork.buf, XUE_WORK_RING_BYTES);
+    xue_mset(xue->dbc_ctx, 0, sizeof(*xue->dbc_ctx));
+    xue_init_strings(xue, xue->dbc_ctx->info);
+    xue_init_ep(xue->dbc_ctx->ep_out, mbs, xue_ep_bulk_out, out);
+    xue_init_ep(xue->dbc_ctx->ep_in, mbs, xue_ep_bulk_in, in);
+
+    reg->erstsz = 1;
+    reg->erstba = op->virt_to_dma(xue->sys, xue->dbc_erst);
+    reg->erdp = erdp;
+    reg->cp = op->virt_to_dma(xue->sys, xue->dbc_ctx);
+    reg->ddi1 = (XUE_DBC_VENDOR << 16) | XUE_DBC_PROTOCOL;
+    reg->ddi2 = XUE_DBC_PRODUCT;
+
+    xue_flush_range(xue, xue->dbc_ctx, sizeof(*xue->dbc_ctx));
+    xue_flush_range(xue, xue->dbc_erst, sizeof(*xue->dbc_erst));
+    xue_flush_range(xue, xue->dbc_ering.trb, XUE_TRB_RING_BYTES);
+    xue_flush_range(xue, xue->dbc_oring.trb, XUE_TRB_RING_BYTES);
+    xue_flush_range(xue, xue->dbc_iring.trb, XUE_TRB_RING_BYTES);
+    xue_flush_range(xue, xue->dbc_owork.buf, XUE_WORK_RING_BYTES);
 
     return 1;
 }
@@ -1650,6 +1678,8 @@ static inline int xue_alloc(struct xue *xue)
 
     xue->dbc_ering.trb =
         (struct xue_trb *)ops->alloc_dma(sys, XUE_TRB_RING_ORDER);
+        bfdebug("xue dbc_ring->trb fresh allocated:");
+        bfdebug_ptr(" - trb-addr", xue->dbc_ering.trb);
     if (!xue->dbc_ering.trb) {
         goto free_erst;
     }
@@ -1667,6 +1697,8 @@ static inline int xue_alloc(struct xue *xue)
     }
 
     xue->dbc_owork.buf = (uint8_t *)ops->alloc_dma(sys, XUE_WORK_RING_ORDER);
+        bfdebug("xue dbc_owork.buf fresh allocated:");
+        bfdebug_ptr(" - owork.buf addr", xue->dbc_owork.buf);
     if (!xue->dbc_owork.buf) {
         goto free_itrb;
     }
@@ -1767,9 +1799,9 @@ static inline int64_t xue_open(struct xue *xue, struct xue_ops *ops, void *sys)
         return 0;
     }
 
-    // xue_init_work_ring(xue, &xue->dbc_owork);
-    // xue_enable_dbc(xue);
-    // xue->open = 1;
+    xue_init_work_ring(xue, &xue->dbc_owork);
+    xue_enable_dbc(xue);
+    xue->open = 1;
 
     return 1;
 }
