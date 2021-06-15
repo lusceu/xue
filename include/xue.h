@@ -1178,6 +1178,7 @@ static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
         return NULL;
     }
 
+    return NULL;
     // xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
     // next = (*xcap & 0xFF00) >> 8;
     // id = *xcap & 0xFF;
