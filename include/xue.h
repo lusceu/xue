@@ -1162,12 +1162,12 @@ static inline int xhc_mmio_phys(struct xue *xue){
  */
 static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
 {
-    uint32_t *xcap;
-    uint32_t next;
-    uint32_t id;
+    //uint32_t *xcap;
+    //uint32_t next;
+    //uint32_t id;
     uint8_t *mmio = (uint8_t *)xue->xhc_mmio;
     uint32_t *hccp1 = (uint32_t *)(mmio + 0x10);
-    const uint32_t DBC_ID = 0xA;
+    //const uint32_t DBC_ID = 0xA;
 
     /**
      * Paranoid check against a zero value. The spec mandates that
@@ -1178,26 +1178,26 @@ static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
         return NULL;
     }
 
-    xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
-    next = (*xcap & 0xFF00) >> 8;
-    id = *xcap & 0xFF;
+    // xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
+    // next = (*xcap & 0xFF00) >> 8;
+    // id = *xcap & 0xFF;
 
-    /**
-     * Table 7-1 states that 'next' is relative to
-     * the current value of xcap and is a dword offset.
-     */
-    while (id != DBC_ID && next) {
-        xcap += next;
-        id = *xcap & 0xFF;
-        next = (*xcap & 0xFF00) >> 8;
-    }
+    // /**
+    //  * Table 7-1 states that 'next' is relative to
+    //  * the current value of xcap and is a dword offset.
+    //  */
+    // while (id != DBC_ID && next) {
+    //     xcap += next;
+    //     id = *xcap & 0xFF;
+    //     next = (*xcap & 0xFF00) >> 8;
+    // }
 
-    if (id != DBC_ID) {
-        return NULL;
-    }
+    // if (id != DBC_ID) {
+    //     return NULL;
+    // }
 
-    xue->xhc_dbc_offset = (uint64_t)xcap - (uint64_t)mmio;
-    return (struct xue_dbc_reg *)xcap;
+    // xue->xhc_dbc_offset = (uint64_t)xcap - (uint64_t)mmio;
+    // return (struct xue_dbc_reg *)xcap;
 }
 
 /**
