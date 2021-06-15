@@ -1559,8 +1559,8 @@ static inline int xue_init_dbc(struct xue *xue)
         return 0;
     }
 
-    xue->dbc_reg = reg;
-    xue_disable_dbc(xue);
+    // xue->dbc_reg = reg;
+    // xue_disable_dbc(xue);
 
     // xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
     // xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
@@ -1761,10 +1761,10 @@ static inline int64_t xue_open(struct xue *xue, struct xue_ops *ops, void *sys)
         return 0;
     }
 
-    if (!xue_init_dbc(xue)) {
-         xue_free(xue);
-         return 0;
-    }
+    // if (!xue_init_dbc(xue)) {
+    //      xue_free(xue);
+    //      return 0;
+    // }
 
     // xue_init_work_ring(xue, &xue->dbc_owork);
     // xue_enable_dbc(xue);
