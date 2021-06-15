@@ -1761,10 +1761,10 @@ static inline int64_t xue_open(struct xue *xue, struct xue_ops *ops, void *sys)
         return 0;
     }
 
-    // if (!xue_init_dbc(xue)) {
-    //      xue_free(xue);
-    //      return 0;
-    // }
+    if (!xue_init_dbc(xue)) {
+        xue_free(xue);
+        return 0;
+    }
 
     // xue_init_work_ring(xue, &xue->dbc_owork);
     // xue_enable_dbc(xue);
