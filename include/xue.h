@@ -364,6 +364,7 @@ static inline void *xue_sys_alloc_dma(void *sys, uint64_t order)
 
     PHYSICAL_ADDRESS phys_addr_high;
     phys_addr_high.QuadPart = 0x00000000FFFFFFFF;
+    //phys_addr_high.QuadPart = 0xFFFFFFFFFFFFFFFF;
 
     return (void *)MmAllocateContiguousMemorySpecifyCache(XUE_PAGE_SIZE << order, phys_addr_low, phys_addr_high, phys_addr_low, MmNonCached);
 }
@@ -410,8 +411,7 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
     //     ULONG BugCheckOnFailure,
     //     ULONG Priority);
 
-    return MmMapLockedPagesSpecifyCache(
-        phys_mdl, KernelMode, MmNonCached, NULL, FALSE, NormalPagePriority);
+    return MmMapLockedPagesSpecifyCache(phys_mdl, KernelMode, MmNonCached, NULL, FALSE, NormalPagePriority);
 
     //return MmMapIoSpace(phys_addr, (SIZE_T)(count << 8), MmNonCached);
 }
@@ -1471,6 +1471,7 @@ static inline void xue_pop_events(struct xue *xue)
 
     while (xue_trb_cyc(event) == er->cyc) {
         bfdebug("Event on Event ring");
+        bfdebug_x32("Event type: ", xue_trb_type(event));
         switch (xue_trb_type(event)) {
         case xue_trb_tfre:
             bfdebug_x32("transfer trb event - completion code:", xue_trb_tfre_cc(event));
@@ -1482,6 +1483,7 @@ static inline void xue_pop_events(struct xue *xue)
                 (xue_trb_tfre_ptr(event) & XUE_TRB_RING_MASK) >> trb_shift;
             break;
         case xue_trb_psce:
+            bfdebug_x32("port trb event - completion code:", xue_trb_tfre_cc(event));
             reg->portsc |= (XUE_PSC_ACK_MASK & reg->portsc);
             break;
         default:
@@ -1572,6 +1574,7 @@ static inline void xue_dump(struct xue *xue)
               r->erdp == xue->dbc_erst[0].base);
     xue_debug("    cp == virt_to_dma(ctx): %d\n",
               r->cp == op->virt_to_dma(xue->sys, xue->dbc_ctx));
+    xue_debug("    xhc_mmio_phys: 0x%x, xhc_mmio_virt_phys: 0x%x\n", xue->xhc_mmio_phys, op->virt_to_dma(xue->sys, xue->xhc_mmio));
 }
 
 static inline void xue_enable_dbc(struct xue *xue)
@@ -1591,6 +1594,10 @@ static inline void xue_enable_dbc(struct xue *xue)
     ops->sfence(sys);
     reg->portsc |= (1UL << XUE_PSC_PED);
     ops->sfence(sys);
+    
+    while ((reg->portsc & (1UL << XUE_PSC_PED)) == 0) {
+        ops->pause(sys);
+    }
 
     // /*
     //  * TODO:
@@ -1611,11 +1618,13 @@ static inline void xue_enable_dbc(struct xue *xue)
 
     bfdebug("Waiting for DbC Ctrl DCR bit.");
     xue_dump(xue);
+    xue_pop_events(xue);
 
     while ((reg->ctrl & (1UL << XUE_CTRL_DCR)) == 0) {
         ops->pause(sys);
     }
 
+    xue_pop_events(xue);
     bfdebug("DbC Ctrl DCR bit should be set.");
     xue_dump(xue);
 }
