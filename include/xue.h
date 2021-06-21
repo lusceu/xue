@@ -298,15 +298,6 @@ void MmFreeNonCachedMemory(
   SIZE_T NumberOfBytes
 );
 
-// PVOID MmAllocateContiguousMemory(
-//   SIZE_T           NumberOfBytes,
-//   PHYSICAL_ADDRESS HighestAcceptableAddress
-// );
-
-// void MmFreeContiguousMemory(
-//   PVOID BaseAddress
-// );
-
 
 #define XUE_SYSID xue_sysid_windows
 
@@ -359,14 +350,30 @@ static inline void *xue_sys_alloc_dma(void *sys, uint64_t order)
 {
     (void)sys;
 
-    PHYSICAL_ADDRESS phys_addr_low;
-    phys_addr_low.QuadPart = 0x0;
+    // PHYSICAL_ADDRESS phys_addr_low;
+    // phys_addr_low.QuadPart = 0x0;
 
-    PHYSICAL_ADDRESS phys_addr_high;
-    phys_addr_high.QuadPart = 0x00000000FFFFFFFF;
+    // PHYSICAL_ADDRESS phys_addr_high;
+    // phys_addr_high.QuadPart = 0x00000000FFFFFFFF;
     //phys_addr_high.QuadPart = 0xFFFFFFFFFFFFFFFF;
 
-    return (void *)MmAllocateContiguousMemorySpecifyCache(XUE_PAGE_SIZE << order, phys_addr_low, phys_addr_high, phys_addr_low, MmNonCached);
+    //void* dma_memory = (void *)MmAllocateContiguousMemorySpecifyCache(XUE_PAGE_SIZE << order, phys_addr_low, phys_addr_high, phys_addr_low, MmNonCached);
+
+    void* dma_memory = (void *)ExAllocatePool2(POOL_FLAG_NON_PAGED_EXECUTE, XUE_PAGE_SIZE << order, '1tst');
+
+//     PMDL IoAllocateMdl(
+//   __drv_aliasesMem PVOID VirtualAddress,
+//   ULONG                  Length,
+//   BOOLEAN                SecondaryBuffer,
+//   BOOLEAN                ChargeQuota,
+//   PIRP                   Irp
+// );
+
+
+    // PMDL mdl = IoAllocateMdl(dma_memory, XUE_PAGE_SIZE << order, FALSE, FALSE, NULL);
+    // MmProbeAndLockPages(mdl, KernelMode, IoWriteAccess);
+
+    return dma_memory;
 }
 
 static inline void xue_sys_free_dma(void *sys, void *addr, uint64_t order)
@@ -383,37 +390,39 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
     PHYSICAL_ADDRESS phys_addr;
     phys_addr.QuadPart = phys;
 
-//     typedef struct _MM_PHYSICAL_ADDRESS_LIST
-//     {
-//         PHYSICAL_ADDRESS PhysicalAddress;
-//         SIZE_T NumberOfBytes;
-// } MM_PHYSICAL_ADDRESS_LIST, *PMM_PHYSICAL_ADDRESS_LIST;
+// //     typedef struct _MM_PHYSICAL_ADDRESS_LIST
+// //     {
+// //         PHYSICAL_ADDRESS PhysicalAddress;
+// //         SIZE_T NumberOfBytes;
+// // } MM_PHYSICAL_ADDRESS_LIST, *PMM_PHYSICAL_ADDRESS_LIST;
 
-    MM_PHYSICAL_ADDRESS_LIST phys_addr_list;
-    phys_addr_list.PhysicalAddress = phys_addr;
-    phys_addr_list.NumberOfBytes = (SIZE_T)count;
+//     MM_PHYSICAL_ADDRESS_LIST phys_addr_list;
+//     phys_addr_list.PhysicalAddress = phys_addr;
+//     phys_addr_list.NumberOfBytes = (SIZE_T)count;
 
-// NTSTATUS MmAllocateMdlForIoSpace(
-//   PMM_PHYSICAL_ADDRESS_LIST PhysicalAddressList,
-//   SIZE_T                    NumberOfEntries,
-//   PMDL                      *NewMdl
-// );
+// // NTSTATUS MmAllocateMdlForIoSpace(
+// //   PMM_PHYSICAL_ADDRESS_LIST PhysicalAddressList,
+// //   SIZE_T                    NumberOfEntries,
+// //   PMDL                      *NewMdl
+// // );
 
-    PMDL phys_mdl;
+//     PMDL phys_mdl;
 
-    MmAllocateMdlForIoSpace(&phys_addr_list, 1, &phys_mdl);
+//     MmAllocateMdlForIoSpace(&phys_addr_list, 1, &phys_mdl);
 
-    // PVOID MmMapLockedPagesSpecifyCache(
-    //     PMDL MemoryDescriptorList,
-    //     __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE AccessMode,
-    //     __drv_strictTypeMatch(__drv_typeCond) MEMORY_CACHING_TYPE CacheType,
-    //     PVOID RequestedAddress,
-    //     ULONG BugCheckOnFailure,
-    //     ULONG Priority);
+//     //MmProbeAndLockPages(phys_mdl, KernelMode, IoWriteAccess);
 
-    return MmMapLockedPagesSpecifyCache(phys_mdl, KernelMode, MmNonCached, NULL, FALSE, NormalPagePriority);
+//     // PVOID MmMapLockedPagesSpecifyCache(
+//     //     PMDL MemoryDescriptorList,
+//     //     __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE AccessMode,
+//     //     __drv_strictTypeMatch(__drv_typeCond) MEMORY_CACHING_TYPE CacheType,
+//     //     PVOID RequestedAddress,
+//     //     ULONG BugCheckOnFailure,
+//     //     ULONG Priority);
 
-    //return MmMapIoSpace(phys_addr, (SIZE_T)(count << 8), MmNonCached);
+//     return MmMapLockedPagesSpecifyCache(phys_mdl, KernelMode, MmNonCached, NULL, FALSE, NormalPagePriority);
+
+    return MmMapIoSpace(phys_addr, (SIZE_T)(count), MmNonCached);
 }
 
 static inline void xue_sys_unmap_xhc(void *sys, void *virt, uint64_t count)
@@ -1230,6 +1239,8 @@ static inline struct xue_dbc_reg *xue_find_dbc(struct xue *xue)
         return NULL;
     }
 
+    bfdebug_x32("64bit Capability:", (*hccp1 & 1));
+
     xcap = (uint32_t *)(mmio + (((*hccp1 & 0xFFFF0000) >> 16) << 2));
     next = (*xcap & 0xFF00) >> 8;
     id = *xcap & 0xFF;
@@ -1575,6 +1586,7 @@ static inline void xue_dump(struct xue *xue)
     xue_debug("    cp == virt_to_dma(ctx): %d\n",
               r->cp == op->virt_to_dma(xue->sys, xue->dbc_ctx));
     xue_debug("    xhc_mmio_phys: 0x%x, xhc_mmio_virt_phys: 0x%x\n", xue->xhc_mmio_phys, op->virt_to_dma(xue->sys, xue->xhc_mmio));
+    xue_debug("    xhc_mmio_virt: 0x%x\n", xue->xhc_mmio);
 }
 
 static inline void xue_enable_dbc(struct xue *xue)
