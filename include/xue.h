@@ -38,8 +38,8 @@
 
 /* DbC idVendor and idProduct */
 #define XUE_DBC_VENDOR 0x1D6B
-#define XUE_DBC_PRODUCT 0x0010
-#define XUE_DBC_PROTOCOL 0x0000
+#define XUE_DBC_PRODUCT 0x0011
+#define XUE_DBC_PROTOCOL 0x0001cd
 
 /* DCCTRL fields */
 #define XUE_CTRL_DCR 0
@@ -298,6 +298,15 @@ void MmFreeNonCachedMemory(
   SIZE_T NumberOfBytes
 );
 
+// PVOID MmAllocateContiguousMemory(
+//   SIZE_T           NumberOfBytes,
+//   PHYSICAL_ADDRESS HighestAcceptableAddress
+// );
+
+// void MmFreeContiguousMemory(
+//   PVOID BaseAddress
+// );
+
 
 #define XUE_SYSID xue_sysid_windows
 
@@ -390,21 +399,21 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
     PHYSICAL_ADDRESS phys_addr;
     phys_addr.QuadPart = phys;
 
-// //     typedef struct _MM_PHYSICAL_ADDRESS_LIST
-// //     {
-// //         PHYSICAL_ADDRESS PhysicalAddress;
-// //         SIZE_T NumberOfBytes;
-// // } MM_PHYSICAL_ADDRESS_LIST, *PMM_PHYSICAL_ADDRESS_LIST;
+// // //     typedef struct _MM_PHYSICAL_ADDRESS_LIST
+// // //     {
+// // //         PHYSICAL_ADDRESS PhysicalAddress;
+// // //         SIZE_T NumberOfBytes;
+// // // } MM_PHYSICAL_ADDRESS_LIST, *PMM_PHYSICAL_ADDRESS_LIST;
 
 //     MM_PHYSICAL_ADDRESS_LIST phys_addr_list;
 //     phys_addr_list.PhysicalAddress = phys_addr;
 //     phys_addr_list.NumberOfBytes = (SIZE_T)count;
 
-// // NTSTATUS MmAllocateMdlForIoSpace(
-// //   PMM_PHYSICAL_ADDRESS_LIST PhysicalAddressList,
-// //   SIZE_T                    NumberOfEntries,
-// //   PMDL                      *NewMdl
-// // );
+// // // NTSTATUS MmAllocateMdlForIoSpace(
+// // //   PMM_PHYSICAL_ADDRESS_LIST PhysicalAddressList,
+// // //   SIZE_T                    NumberOfEntries,
+// // //   PMDL                      *NewMdl
+// // // );
 
 //     PMDL phys_mdl;
 
@@ -412,13 +421,13 @@ static inline void *xue_sys_map_xhc(void *sys, uint64_t phys, uint64_t count)
 
 //     //MmProbeAndLockPages(phys_mdl, KernelMode, IoWriteAccess);
 
-//     // PVOID MmMapLockedPagesSpecifyCache(
-//     //     PMDL MemoryDescriptorList,
-//     //     __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE AccessMode,
-//     //     __drv_strictTypeMatch(__drv_typeCond) MEMORY_CACHING_TYPE CacheType,
-//     //     PVOID RequestedAddress,
-//     //     ULONG BugCheckOnFailure,
-//     //     ULONG Priority);
+// //     // PVOID MmMapLockedPagesSpecifyCache(
+// //     //     PMDL MemoryDescriptorList,
+// //     //     __drv_strictType(KPROCESSOR_MODE / enum _MODE, __drv_typeConst) KPROCESSOR_MODE AccessMode,
+// //     //     __drv_strictTypeMatch(__drv_typeCond) MEMORY_CACHING_TYPE CacheType,
+// //     //     PVOID RequestedAddress,
+// //     //     ULONG BugCheckOnFailure,
+// //     //     ULONG Priority);
 
 //     return MmMapLockedPagesSpecifyCache(phys_mdl, KernelMode, MmNonCached, NULL, FALSE, NormalPagePriority);
 
@@ -881,7 +890,7 @@ struct xue_dbc_reg {
 
 /* Defines the size in bytes of TRB rings as 2^XUE_TRB_RING_ORDER * 4096 */
 #ifndef XUE_TRB_RING_ORDER
-#define XUE_TRB_RING_ORDER 4
+#define XUE_TRB_RING_ORDER 3
 #endif
 #define XUE_TRB_RING_CAP (XUE_TRB_PER_PAGE * (1ULL << XUE_TRB_RING_ORDER))
 #define XUE_TRB_RING_BYTES (XUE_TRB_RING_CAP * sizeof(struct xue_trb))
@@ -1568,7 +1577,7 @@ static inline void xue_dump(struct xue *xue)
     struct xue_dbc_reg *r = xue->dbc_reg;
 
     xue_debug("XUE DUMP:\n");
-    xue_debug("    ctrl: 0x%x stat: 0x%x psc: 0x%x\n", r->ctrl, r->st,
+    xue_debug("    ctrl: 0x%x stat: 0x%x portsc: 0x%x\n", r->ctrl, r->st,
               r->portsc);
     xue_debug("    id: 0x%x, db: 0x%x\n", r->id, r->db);
 #if defined(__XEN__) || defined(VMM)
@@ -1596,6 +1605,7 @@ static inline void xue_enable_dbc(struct xue *xue)
     struct xue_dbc_reg *reg = xue->dbc_reg;
 
     ops->sfence(sys);
+    reg->ctrl |= (1UL << 1);
     reg->ctrl |= (1UL << XUE_CTRL_DCE);
     ops->sfence(sys);
 
@@ -1633,6 +1643,8 @@ static inline void xue_enable_dbc(struct xue *xue)
     xue_pop_events(xue);
 
     while ((reg->ctrl & (1UL << XUE_CTRL_DCR)) == 0) {
+        xue_dump(xue);
+        xue_pop_events(xue);
         ops->pause(sys);
     }
 
@@ -1647,6 +1659,9 @@ static inline void xue_disable_dbc(struct xue *xue)
     struct xue_ops *ops = xue->ops;
     struct xue_dbc_reg *reg = xue->dbc_reg;
 
+    bfdebug("non disabled dbc");
+    xue_dump(xue);
+
     reg->portsc &= ~(1UL << XUE_PSC_PED);
     ops->sfence(sys);
     reg->ctrl &= ~(1UL << XUE_CTRL_DCE);
@@ -1654,6 +1669,10 @@ static inline void xue_disable_dbc(struct xue *xue)
     while (reg->ctrl & (1UL << XUE_CTRL_DCE)) {
         ops->pause(sys);
     }
+
+    xue_dump(xue);
+    bfdebug("initially disabling DbC");
+    xue_dump(xue);
 }
 
 static inline int xue_init_dbc(struct xue *xue)
@@ -1678,6 +1697,7 @@ static inline int xue_init_dbc(struct xue *xue)
     xue_trb_ring_init(xue, &xue->dbc_ering, 0, XUE_DB_INVAL);
     xue_trb_ring_init(xue, &xue->dbc_oring, 1, XUE_DB_OUT);
     xue_trb_ring_init(xue, &xue->dbc_iring, 1, XUE_DB_IN);
+
 
     erdp = op->virt_to_dma(xue->sys, xue->dbc_ering.trb);
     if (!erdp) {
